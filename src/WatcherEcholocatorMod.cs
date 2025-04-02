@@ -115,7 +115,7 @@ namespace WatcherEcholocator
 
 			// Add a glowy thing to the region icon.
 			regionIconGlowSprites[self] = new RegionIconGlowSprite(self);
-			Debug.Log($"(WatcherEcholocator) Added glowy sprite to {Region.GetRegionFullName(self.region, null)}.");
+			//Debug.Log($"(WatcherEcholocator) Added glowy sprite to {Region.GetRegionFullName(self.region, null)}.");
 		}
 
 		// When a `WarpRegionIcon` is destroyed, also destroy its associated `RegionIconGlowSprite`.
@@ -125,7 +125,7 @@ namespace WatcherEcholocator
 			{
 				glowSprite.Destroy();
 				regionIconGlowSprites.Remove(self);
-				Debug.Log($"(WatcherEcholocator) Cleared glowy sprite for {Region.GetRegionFullName(self.region, null)}.");
+				//Debug.Log($"(WatcherEcholocator) Cleared glowy sprite for {Region.GetRegionFullName(self.region, null)}.");
 			}
 			orig(self);
 		}
