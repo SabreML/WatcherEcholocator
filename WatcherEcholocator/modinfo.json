@@ -4,6 +4,8 @@
 	"version": "1.0.0",
 	"target_game_version": "v1.10.1",
 	"authors": "SabreML",
-	"description": "Placeholder",
-	"tags": ["Watcher"]
+	"description": "Adds a golden glow around regions containing an echo on the Watcher warp map.",
+	"requirements": ["watcher"],
+	"requirements_names": ["The Watcher"],
+	"tags": ["Game Mechanics", "Accessibility", "Watcher"]
 }
