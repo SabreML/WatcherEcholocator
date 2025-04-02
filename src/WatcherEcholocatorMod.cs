@@ -19,36 +19,42 @@ namespace WatcherEcholocator
 		public const string VERSION = "1.0.0";
 
 		// Dict of regions where there's still an echo to find, and the number of echoes in the region.
-		private Dictionary<string, int> remainingEncounterRegions = [];
+		private Dictionary<string, int> remainingEncounterRegions;
 
-		private Dictionary<Map.WarpRegionIcon, RegionIconGlowSprite> regionIconGlowSprites = [];
+		// Dic of region icons in the watcher warp map, and the attached glowy sprite added by this mod.
+		private readonly Dictionary<Map.WarpRegionIcon, RegionIconGlowSprite> regionIconGlowSprites = [];
 
 		public void OnEnable()
 		{
-			On.HUD.Map.LoadWarpConnections += LoadWarpConnectionsHK;
-			On.HUD.Map.ClearSprites += ClearSpritesHK;
-			On.HUD.Map.Draw += DrawHK;
+			On.HUD.Map.LoadWarpConnections += Map_LoadWarpConnectionsHK;
+			On.HUD.Map.Draw += Map_DrawHK;
 
-			On.HUD.Map.WarpRegionIcon.AddGraphics += AddGraphicsHK;
-			On.HUD.Map.WarpRegionIcon.UpdateGraphics += UpdateGraphicsHK;
+			On.HUD.Map.WarpRegionIcon.AddGraphics += WRI_AddGraphicsHK;
+			On.HUD.Map.WarpRegionIcon.DestroyGraphics += WRI_DestroyGraphicsHK;
+			On.HUD.Map.WarpRegionIcon.UpdateGraphics += WRI_UpdateGraphicsHK;
 		}
 
-		private void LoadWarpConnectionsHK(On.HUD.Map.orig_LoadWarpConnections orig, Map self)
+		// Called when the map (regular map or warp map) is first loaded by the game.
+		// (This is all done every time the map is loaded instead of being cached in case the player finds a new echo while playing.)
+		private void Map_LoadWarpConnectionsHK(On.HUD.Map.orig_LoadWarpConnections orig, Map self)
 		{
-			// Same as in the original method. Only bother doing any of this if it's the watcher warp map being loaded.
+			// Only actually do anything if it's the watcher's warp map being loaded.
 			if (self.mapData.type != Map.MapType.WarpLinks)
 			{
+				orig(self);
 				return;
 			}
 
 			Debug.Log("(WatcherEcholocator) Loading encounter list...");
+
 			// Copy over the `regionSpinningTopRooms`' regions into a new dictionary, with each region's value set to the number of encounters in them.
 			remainingEncounterRegions = Custom.rainWorld.regionSpinningTopRooms.ToDictionary(pair => pair.Key, pair => pair.Value.Count);
-			// `regionSpinningTopRooms` is a `Dictionary<string, List<string>>` of all regions codes in the game,
-			// with the lists containing the room and `spawnIdentifier` of the echo encounter(s) in that region. (or an empty list if there aren't any)
+			// `regionSpinningTopRooms` is a `Dictionary<string, List<string>>` of all regions codes in the game (keys),
+			// and lists containing the room and `spawnIdentifier` of the echo encounter(s) in that region (value). (or an empty list if there aren't any)
 
 			// This is just here so that it can be printed to the debug log.
 			List<string> foundEncounters = [];
+
 			foreach (KeyValuePair<string, List<string>> pair in Custom.rainWorld.regionSpinningTopRooms)
 			{
 				// No encounters in this region.
@@ -56,8 +62,6 @@ namespace WatcherEcholocator
 				{
 					continue;
 				}
-
-				string region = pair.Key;
 
 				foreach (string encounter in pair.Value)
 				{
@@ -67,8 +71,8 @@ namespace WatcherEcholocator
 					// See if the player has already had this encounter.
 					if (Custom.rainWorld.progression.currentSaveState.deathPersistentSaveData.spinningTopEncounters.Contains(encounterID))
 					{
-						// If so, remove the entry from the `remainingEncounterRegions` dict.
-						remainingEncounterRegions[region]--;
+						// If so, remove one entry from the `remainingEncounterRegions` dict.
+						remainingEncounterRegions[pair.Key]--;
 						foundEncounters.Add(encounter);
 					}
 				}
@@ -76,30 +80,13 @@ namespace WatcherEcholocator
 
 			Debug.Log($"(WatcherEcholocator) Encounter list loaded! ({string.Join(",", foundEncounters)})");
 
-			// This should all be done before the game does anything.
 			orig(self);
 		}
 
-		private void ClearSpritesHK(On.HUD.Map.orig_ClearSprites orig, Map self)
-		{
-			foreach (RegionIconGlowSprite glowSprite in regionIconGlowSprites.Values)
-			{
-				glowSprite.Destroy();
-			}
-			regionIconGlowSprites.Clear();
-			Debug.Log("(WatcherEcholocator) Glow sprites cleared.");
-			orig(self);
-		}
-
-		private void DrawHK(On.HUD.Map.orig_Draw orig, Map self, float timeStacker)
+		// Update the glow sprite animation along with the rest of the map.
+		private void Map_DrawHK(On.HUD.Map.orig_Draw orig, Map self, float timeStacker)
 		{
 			orig(self, timeStacker);
-			// Same as in the original method. Only bother doing any of this if it's the watcher warp map being loaded.
-			if (self.mapData.type != Map.MapType.WarpLinks)
-			{
-				return;
-			}
-
 			foreach (RegionIconGlowSprite glowSprite in regionIconGlowSprites.Values)
 			{
 				glowSprite.Draw(timeStacker);
@@ -107,10 +94,19 @@ namespace WatcherEcholocator
 		}
 
 
-		private void AddGraphicsHK(On.HUD.Map.WarpRegionIcon.orig_AddGraphics orig, Map.WarpRegionIcon self)
+		// Called when a `WarpRegionIcon` is first created. If it's a region with an echo in it, add a glowy thing.
+		private void WRI_AddGraphicsHK(On.HUD.Map.WarpRegionIcon.orig_AddGraphics orig, Map.WarpRegionIcon self)
 		{
 			orig(self);
 
+			// This shouldn't be possible, but just in case.
+			if (remainingEncounterRegions == null)
+			{
+				string errorText = "(WatcherEcholocator) RemainingEncounterRegions is missing!";
+				Debug.Log(errorText);
+				Debug.LogException(new System.Exception(errorText));
+				return;
+			}
 			// If this `WarpRegionIcon` doesn't have any remaining echo encounters.
 			if (remainingEncounterRegions[self.region] == 0)
 			{
@@ -118,11 +114,24 @@ namespace WatcherEcholocator
 			}
 
 			// Add a glowy thing to the region icon.
-			regionIconGlowSprites.Add(self, new RegionIconGlowSprite(self));
-			Debug.Log($"(WatcherEcholocator) Added glowy thing to {Region.GetRegionFullName(self.region, null)}.");
+			regionIconGlowSprites[self] = new RegionIconGlowSprite(self);
+			Debug.Log($"(WatcherEcholocator) Added glowy sprite to {Region.GetRegionFullName(self.region, null)}.");
 		}
 
-		private void UpdateGraphicsHK(On.HUD.Map.WarpRegionIcon.orig_UpdateGraphics orig, Map.WarpRegionIcon self)
+		// When a `WarpRegionIcon` is destroyed, also destroy its associated `RegionIconGlowSprite`.
+		private void WRI_DestroyGraphicsHK(On.HUD.Map.WarpRegionIcon.orig_DestroyGraphics orig, Map.WarpRegionIcon self)
+		{
+			if (regionIconGlowSprites.TryGetValue(self, out RegionIconGlowSprite glowSprite))
+			{
+				glowSprite.Destroy();
+				regionIconGlowSprites.Remove(self);
+				Debug.Log($"(WatcherEcholocator) Cleared glowy sprite for {Region.GetRegionFullName(self.region, null)}.");
+			}
+			orig(self);
+		}
+
+		// Update the `WarpRegionIcon`'s associated glowsprite so that they move with each other.
+		private void WRI_UpdateGraphicsHK(On.HUD.Map.WarpRegionIcon.orig_UpdateGraphics orig, Map.WarpRegionIcon self)
 		{
 			orig(self);
 			if (regionIconGlowSprites.TryGetValue(self, out RegionIconGlowSprite glowsprite))
@@ -160,16 +169,20 @@ namespace WatcherEcholocator
 		#endregion
 	}
 
+	// Holder class for the golden glowing sprite that this mod adds.
 	public class RegionIconGlowSprite
 	{
+		// The region icon this is associated with.
 		private Map.WarpRegionIcon warpRegionIcon;
 
+		// The actual sprite itself.
 		private FSprite glowSprite;
 
-		// Current position along the 'glowing' sine wave. (See `Draw()`)
+		// The current position along the 'glowing' sine wave. (See `Draw()`)
+		// (static so that they all glow at the same time)
 		private static float glowSin;
 
-		// Size of the glow sprite.
+		// The size of the glow sprite.
 		private const int SPRITE_SCALE = 13;
 		// The speed at which the sprite glows/pulses in `Draw()`. (lower = faster)
 		private const int GLOW_RATE = 8;
@@ -186,13 +199,16 @@ namespace WatcherEcholocator
 			warpRegionIcon.map.container.AddChild(glowSprite);
 		}
 
+		// Clean up all references.
 		public void Destroy()
 		{
 			warpRegionIcon = null;
 			glowSprite.RemoveFromContainer();
 			glowSprite = null;
+			glowSin = 0f;
 		}
 
+		// Updates the values of the glow sprite.
 		public void UpdateGraphics()
 		{
 			// Make the glow sprite line up with its corresponding region icon.
@@ -204,9 +220,10 @@ namespace WatcherEcholocator
 			glowSin += 0.1f;
 		}
 
+		// Animates the glow sprite 'pulsing' slightly.
 		public void Draw(float timeStacker)
 		{
-			// If the map isn't currently visible.
+			// If the warp map isn't currently visible.
 			if (!warpRegionIcon.map.visible)
 			{
 				glowSprite.alpha = 0f;
@@ -221,6 +238,7 @@ namespace WatcherEcholocator
 			}
 			else
 			{
+				// If it isn't selected, fade the alpha down to a background level.
 				glowSprite.alpha = 0.20f;
 			}
 

@@ -1,9 +1,0 @@
-{
-	"id": "sabreml.watcherecholocator",
-	"name": "Watcher Echolocator",
-	"version": "1.0.0",
-	"target_game_version": "v1.10.1",
-	"authors": "SabreML",
-	"description": "Placeholder",
-	"tags": ["Watcher"]
-}
