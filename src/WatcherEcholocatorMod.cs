@@ -16,7 +16,7 @@ namespace WatcherEcholocator
 	public class WatcherEcholocatorMod : BaseUnityPlugin
 	{
 		// The current mod version. (Stored here as a variable so that I don't have to update it in as many places.)
-		public const string VERSION = "1.1.1";
+		public const string VERSION = "1.2.0";
 
 		// Dict of regions where there's still an echo to find, and the number of echoes in the region.
 		// (Includes empty regions)
@@ -24,6 +24,10 @@ namespace WatcherEcholocator
 
 		// Dic of region icons in the watcher warp map, and the attached glowy sprite added by this mod.
 		private readonly Dictionary<Map.WarpRegionIcon, RegionIconGlowSprite> regionIconGlowSprites = [];
+
+		// Bool indicating if the player has seen the first ending of the expansion.
+		// If they have, then the glowy sprites around region icons isn't useful anymore, and should be skipped.
+		private bool playerHasEndingOne;
 
 		public void OnEnable()
 		{
@@ -42,6 +46,20 @@ namespace WatcherEcholocator
 			// Only actually do anything if it's the watcher's warp map being loaded.
 			if (self.mapData.type != Map.MapType.WarpLinks)
 			{
+				orig(self);
+				return;
+			}
+
+			// Get the current savegame from `RainWorld.progression`.
+			// If the player has starved themselves, the savestate is moved over to `starvedSaveState` and `currentSaveState` is made null.
+			SaveState saveState = Custom.rainWorld.progression.currentSaveState ?? Custom.rainWorld.progression.starvedSaveState;
+
+			// If the player has seen Watcher ending 1 (Ancient Urban), then any remaining echoes won't spawn anymore.
+			// (See `Watcher.SpinningTop.Update()` and `Watcher.SpinningTop.Ascended` for more details.)
+			if (saveState.deathPersistentSaveData.sawVoidBathSlideshow)
+			{
+				Debug.Log("(WatcherEcholocator) Player has seen Ending 1, and echoes will no longer spawn. Skipping region glow!");
+				playerHasEndingOne = true;
 				orig(self);
 				return;
 			}
@@ -68,9 +86,6 @@ namespace WatcherEcholocator
 				{
 					// The list's contents are formatted as `cc_c12:15` (`room:ID`). We just want the ID.
 					int encounterID = int.Parse(encounter.Split(':')[1]);
-
-					// If the player has starved themselves, the savestate is moved over to `starvedSaveState` and `currentSaveState` is made null.
-					SaveState saveState = Custom.rainWorld.progression.currentSaveState ?? Custom.rainWorld.progression.starvedSaveState;
 
 					// See if the player has already had this encounter.
 					if (saveState.deathPersistentSaveData.spinningTopEncounters.Contains(encounterID))
@@ -104,6 +119,12 @@ namespace WatcherEcholocator
 		private void WRI_AddGraphicsHK(On.HUD.Map.WarpRegionIcon.orig_AddGraphics orig, Map.WarpRegionIcon self)
 		{
 			orig(self);
+
+			// Don't add any glow sprites if there's no echoes to find.
+			if (playerHasEndingOne)
+			{
+				return;
+			}
 
 			// This shouldn't be possible, but just in case.
 			if (remainingEncounterRegions == null)

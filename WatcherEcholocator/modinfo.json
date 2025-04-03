@@ -1,7 +1,7 @@
 {
 	"id": "sabreml.watcherecholocator",
 	"name": "Watcher Echolocator",
-	"version": "1.1.1",
+	"version": "1.2.0",
 	"target_game_version": "v1.10.1",
 	"authors": "SabreML",
 	"description": "Adds a golden glow around regions still containing an echo on the Watcher warp map.",
