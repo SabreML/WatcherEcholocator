@@ -145,34 +145,6 @@ namespace WatcherEcholocator
 				glowsprite.UpdateGraphics();
 			}
 		}
-
-
-		#region Debugging Methods
-		private void DebugPrintAllEncounterRegions(bool fullName = false)
-		{
-			Debug.Log("(WatcherEcholocator) All Encounter Regions:");
-			Debug.Log(string.Join(", ", Custom.rainWorld.regionSpinningTopRooms
-				.Where(pair => pair.Value.Count != 0)
-				.Select(pair => (fullName ? Region.GetRegionFullName(pair.Key, null) : pair.Key) + $" ({pair.Value.Count})")
-			));
-		}
-		private void DebugPrintAllRemainingEncounterRegions(bool fullName = false)
-		{
-			Debug.Log("(WatcherEcholocator) Remaining Encounter Regions:");
-			Debug.Log(string.Join(", ", remainingEncounterRegions
-				.Where(pair => pair.Value != 0)
-				.Select(pair => (fullName ? Region.GetRegionFullName(pair.Key, null) : pair.Key) + $" ({pair.Value})")
-			));
-		}
-		private void DebugPrintAllCompletedEncounterRegions(bool fullName = false)
-		{
-			Debug.Log("(WatcherEcholocator) Completed Encounter Regions:");
-			Debug.Log(string.Join(", ", Custom.rainWorld.regionSpinningTopRooms
-				.Where(pair => pair.Value.Count != 0 && remainingEncounterRegions[pair.Key] == 0)
-				.Select(pair => fullName ? Region.GetRegionFullName(pair.Key, null) : pair.Key)
-			));
-		}
-		#endregion
 	}
 
 	// Holder class for the golden glowing sprite that this mod adds.
