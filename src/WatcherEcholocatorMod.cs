@@ -16,7 +16,7 @@ namespace WatcherEcholocator
 	public class WatcherEcholocatorMod : BaseUnityPlugin
 	{
 		// The current mod version. (Stored here as a variable so that I don't have to update it in as many places.)
-		public const string VERSION = "1.1.0";
+		public const string VERSION = "1.1.1";
 
 		// Dict of regions where there's still an echo to find, and the number of echoes in the region.
 		// (Includes empty regions)
@@ -69,8 +69,11 @@ namespace WatcherEcholocator
 					// The list's contents are formatted as `cc_c12:15` (`room:ID`). We just want the ID.
 					int encounterID = int.Parse(encounter.Split(':')[1]);
 
+					// If the player has starved themselves, the savestate is moved over to `starvedSaveState` and `currentSaveState` is made null.
+					SaveState saveState = Custom.rainWorld.progression.currentSaveState ?? Custom.rainWorld.progression.starvedSaveState;
+
 					// See if the player has already had this encounter.
-					if (Custom.rainWorld.progression.currentSaveState.deathPersistentSaveData.spinningTopEncounters.Contains(encounterID))
+					if (saveState.deathPersistentSaveData.spinningTopEncounters.Contains(encounterID))
 					{
 						// If so, remove one entry from the `remainingEncounterRegions` dict.
 						remainingEncounterRegions[pair.Key]--;
