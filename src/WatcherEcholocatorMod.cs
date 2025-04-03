@@ -16,9 +16,10 @@ namespace WatcherEcholocator
 	public class WatcherEcholocatorMod : BaseUnityPlugin
 	{
 		// The current mod version. (Stored here as a variable so that I don't have to update it in as many places.)
-		public const string VERSION = "1.0.0";
+		public const string VERSION = "1.1.0";
 
 		// Dict of regions where there's still an echo to find, and the number of echoes in the region.
+		// (Includes empty regions)
 		private Dictionary<string, int> remainingEncounterRegions;
 
 		// Dic of region icons in the watcher warp map, and the attached glowy sprite added by this mod.
@@ -78,7 +79,9 @@ namespace WatcherEcholocator
 				}
 			}
 
-			Debug.Log($"(WatcherEcholocator) Encounter list loaded! ({string.Join(",", foundEncounters)})");
+			// Print out the list of regions with an echo in them, for debugging purposes.
+			IEnumerable<string> remainingRegions = remainingEncounterRegions.Where(pair => pair.Value > 0).Select(pair => pair.Key);
+			Debug.Log($"(WatcherEcholocator) Encounter list loaded! Remaining: ({string.Join(",", remainingRegions)})");
 
 			orig(self);
 		}
@@ -220,7 +223,7 @@ namespace WatcherEcholocator
 			glowSin += 0.1f;
 		}
 
-		// Animates the glow sprite 'pulsing' slightly.
+		// Animates the glow sprite 'pulsing' slightly, as well as other alpha operations.
 		public void Draw(float timeStacker)
 		{
 			// If the warp map isn't currently visible.
@@ -242,10 +245,13 @@ namespace WatcherEcholocator
 				glowSprite.alpha = 0.20f;
 			}
 
-			// If the map is currently fading in, change the glow's alpha along with it.
-			if (warpRegionIcon.map.fade < 1)
+			// If the warp map is currently fading in as a whole, or this specific region has only just been discovered.
+			// (If it is a new region, then it slowly fades in after everything else, then pulses in and out.)
+			// See the game's `Map.WarpRegionIcon.UpdateGraphics()` method for more details.
+			if (warpRegionIcon.map.fade < 1 || (warpRegionIcon.newRegion && warpRegionIcon.map.hud.owner.GetOwnerType() != HUD.HUD.OwnerType.FastTravelScreen))
 			{
-				glowSprite.alpha *= warpRegionIcon.map.fade;
+				// Adjust the glow sprite's alpha to fade along with it.
+				glowSprite.alpha *= warpRegionIcon.circle.fade;
 			}
 		}
 	}
