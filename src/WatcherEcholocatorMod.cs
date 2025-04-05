@@ -16,7 +16,7 @@ namespace WatcherEcholocator
 	public class WatcherEcholocatorMod : BaseUnityPlugin
 	{
 		// The current mod version. (Stored here as a variable so that I don't have to update it in as many places.)
-		public const string VERSION = "1.2.1";
+		public const string VERSION = "1.2.2";
 
 		// Dict of regions where there's still an echo to find, and the number of echoes in the region.
 		// (Includes empty regions)
@@ -80,10 +80,8 @@ namespace WatcherEcholocator
 			// (This obviously isn't meant to happen, but I've had it before when the game failed to build the token cache.)
 			if (remainingEncounterRegions.All(pair => pair.Value == 0))
 			{
-				string errorText = "(WatcherEcholocator) Rain World's token cache is missing! To fix, disable and re-enable The Watcher in the remix menu.";
-				// (forces a token cache rebuild)
-				Debug.Log(errorText);
-				Debug.LogException(new System.Exception(errorText));
+				// (re-enabling a vanilla remix mod forces a token cache rebuild)
+				LogImportantError("(WatcherEcholocator) Rain World's token cache is missing! To fix, disable and re-enable The Watcher in the remix menu.");
 				orig(self);
 				return;
 			}
@@ -146,14 +144,20 @@ namespace WatcherEcholocator
 			// This shouldn't be possible, but just in case.
 			if (remainingEncounterRegions == null)
 			{
-				string errorText = "(WatcherEcholocator) RemainingEncounterRegions is missing!";
-				Debug.Log(errorText);
-				Debug.LogException(new System.Exception(errorText));
+				LogImportantError("(WatcherEcholocator) RemainingEncounterRegions is missing!");
+				return;
+			}
+			// If the region this icon corresponds to isn't in the encounter list.
+			// (also shouldn't be possible, but other mods could add/remove regions)
+			if (!remainingEncounterRegions.TryGetValue(self.region, out int regionEncounterNum))
+			{
+				LogImportantError($"(WatcherEcholocator) Unable to find encounter values for {self.region}!");
 				return;
 			}
 			// If this `WarpRegionIcon` doesn't have any remaining echo encounters.
-			if (remainingEncounterRegions[self.region] == 0)
+			if (regionEncounterNum == 0)
 			{
+				// This is normal, so don't log anything.
 				return;
 			}
 
@@ -183,7 +187,15 @@ namespace WatcherEcholocator
 				glowsprite.UpdateGraphics();
 			}
 		}
+
+		// Sends `errorMessage` to `Debug.Log()`, and to `Debug.LogException()` as an exception.
+		private void LogImportantError(string errorMessage)
+		{
+			Debug.Log(errorMessage);
+			Debug.LogException(new System.Exception(errorMessage));
+		}
 	}
+
 
 	// Holder class for the golden glowing sprite that this mod adds.
 	public class RegionIconGlowSprite
