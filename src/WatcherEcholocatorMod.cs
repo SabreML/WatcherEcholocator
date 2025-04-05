@@ -16,7 +16,7 @@ namespace WatcherEcholocator
 	public class WatcherEcholocatorMod : BaseUnityPlugin
 	{
 		// The current mod version. (Stored here as a variable so that I don't have to update it in as many places.)
-		public const string VERSION = "1.2.0";
+		public const string VERSION = "1.2.1";
 
 		// Dict of regions where there's still an echo to find, and the number of echoes in the region.
 		// (Includes empty regions)
@@ -58,10 +58,15 @@ namespace WatcherEcholocator
 			// (See `Watcher.SpinningTop.Update()` and `Watcher.SpinningTop.Ascended` for more details.)
 			if (saveState.deathPersistentSaveData.sawVoidBathSlideshow)
 			{
-				Debug.Log("(WatcherEcholocator) Player has seen Ending 1, and echoes will no longer spawn. Skipping region glow!");
+				Debug.Log("(WatcherEcholocator) Player has seen ending 1, and echoes will no longer spawn. Skipping region glow!");
 				playerHasEndingOne = true;
 				orig(self);
 				return;
+			}
+			else
+			{
+				// Set this back to false in case the player switched saves from a completed game to an incomplete one.
+				playerHasEndingOne = false;
 			}
 
 			Debug.Log("(WatcherEcholocator) Loading encounter list...");
@@ -70,6 +75,18 @@ namespace WatcherEcholocator
 			remainingEncounterRegions = Custom.rainWorld.regionSpinningTopRooms.ToDictionary(pair => pair.Key, pair => pair.Value.Count);
 			// `regionSpinningTopRooms` is a `Dictionary<string, List<string>>` of all regions codes in the game (keys),
 			// and lists containing the room and `spawnIdentifier` of the echo encounter(s) in that region (value). (or an empty list if there aren't any)
+
+			// If every region in the game is empty of echoes for some reason.
+			// (This obviously isn't meant to happen, but I've had it before when the game failed to build the token cache.)
+			if (remainingEncounterRegions.All(pair => pair.Value == 0))
+			{
+				string errorText = "(WatcherEcholocator) Rain World's token cache is missing! To fix, disable and re-enable The Watcher in the remix menu.";
+				// (forces a token cache rebuild)
+				Debug.Log(errorText);
+				Debug.LogException(new System.Exception(errorText));
+				orig(self);
+				return;
+			}
 
 			// This is just here so that it can be printed to the debug log.
 			List<string> foundEncounters = [];
