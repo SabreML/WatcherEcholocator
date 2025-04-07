@@ -86,9 +86,6 @@ namespace WatcherEcholocator
 				return;
 			}
 
-			// This is just here so that it can be printed to the debug log.
-			List<string> foundEncounters = [];
-
 			foreach (KeyValuePair<string, List<string>> pair in Custom.rainWorld.regionSpinningTopRooms)
 			{
 				// No encounters in this region.
@@ -107,7 +104,6 @@ namespace WatcherEcholocator
 					{
 						// If so, remove one entry from the `remainingEncounterRegions` dict.
 						remainingEncounterRegions[pair.Key]--;
-						foundEncounters.Add(encounter);
 					}
 				}
 			}
@@ -273,7 +269,7 @@ namespace WatcherEcholocator
 			// If the warp map is currently fading in as a whole, or this specific region has only just been discovered.
 			// (If it is a new region, then it slowly fades in after everything else, then pulses in and out.)
 			// See the game's `Map.WarpRegionIcon.UpdateGraphics()` method for more details.
-			if (warpRegionIcon.map.fade < 1 || (warpRegionIcon.newRegion && warpRegionIcon.map.hud.owner.GetOwnerType() != HUD.HUD.OwnerType.FastTravelScreen))
+			if (warpRegionIcon.map.fade < 1f || (warpRegionIcon.newRegion && warpRegionIcon.map.hud.owner.GetOwnerType() != HUD.HUD.OwnerType.FastTravelScreen))
 			{
 				// Adjust the glow sprite's alpha to fade along with it.
 				glowSprite.alpha *= warpRegionIcon.circle.fade;
