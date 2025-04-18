@@ -7,6 +7,9 @@
 
 **Watcher Echolocator** is a mod for Rain World which adds a golden glow around regions still containing an echo on the Watcher warp map.
 
+<b><ins>Note:</ins> As of Rain World v1.10.2, a system functionally the same as this mod (although visually different) has been added to the base Watcher expansion,
+with regions containing an unvisited echo now showing a golden ring around them.</b>
+
 ## Installation:
 1. Download the mod from the [Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3456628202).\
 **OR:**
